@@ -1,6 +1,6 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { motion } from 'framer-motion'
-import { ArrowUpRight, CheckCircle2, Clock3, LogOut, Mail, RotateCcw, ShieldCheck, User, XCircle } from 'lucide-react'
+import { ArrowUpRight, CheckCircle2, Clock3, Download, FileText, LogOut, Mail, RotateCcw, Save, ShieldCheck, User, XCircle } from 'lucide-react'
 
 type Appointment = {
   id: string
@@ -11,6 +11,7 @@ type Appointment = {
   slot_end: string
   created_at: string
   status: 'requested' | 'confirmed' | 'cancelled'
+  notes: string
 }
 
 type Stats = {
@@ -80,6 +81,13 @@ function Dashboard({ onLogout }: { onLogout: () => void }) {
   const [stats, setStats] = useState<Stats | null>(null)
   const [filter, setFilter] = useState<'all' | 'requested' | 'confirmed' | 'cancelled'>('all')
   const [loading, setLoading] = useState(true)
+  const today = useMemo(() => new Date().toISOString().slice(0, 10), [])
+  const nextMonth = useMemo(() => {
+    const d = new Date(); d.setMonth(d.getMonth() + 1); return d.toISOString().slice(0, 10)
+  }, [])
+  const [dateFrom, setDateFrom] = useState(today)
+  const [dateTo, setDateTo] = useState(nextMonth)
+  const [exporting, setExporting] = useState(false)
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -110,6 +118,42 @@ function Dashboard({ onLogout }: { onLogout: () => void }) {
     } catch {
       setAppointments(prev)
     }
+  }
+
+  const saveNotes = async (id: string, notes: string) => {
+    const prev = appointments
+    setAppointments((cur) => cur.map((x) => x.id === id ? { ...x, notes } : x))
+    try {
+      const res = await fetch(`/api/admin/appointments/${id}`, {
+        method: 'PATCH', credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ notes }),
+      })
+      if (!res.ok) throw new Error('Save failed')
+    } catch {
+      setAppointments(prev)
+      throw new Error('Save failed')
+    }
+  }
+
+  const exportCsv = async () => {
+    setExporting(true)
+    try {
+      const params = new URLSearchParams()
+      if (dateFrom) params.set('date_from', dateFrom)
+      if (dateTo) params.set('date_to', dateTo)
+      const res = await fetch(`/api/admin/appointments.csv?${params.toString()}`, { credentials: 'include' })
+      if (!res.ok) throw new Error('Export failed')
+      const blob = await res.blob()
+      const url = URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = url
+      link.download = `meridian-appointments-${dateFrom}_to_${dateTo}.csv`
+      document.body.appendChild(link)
+      link.click()
+      link.remove()
+      URL.revokeObjectURL(url)
+    } finally { setExporting(false) }
   }
 
   const signOut = async () => {
@@ -155,6 +199,19 @@ function Dashboard({ onLogout }: { onLogout: () => void }) {
         <button className="filter-tab refresh" onClick={load} data-testid="admin-refresh-button" aria-label="Refresh"><RotateCcw size={13} /></button>
       </div>
 
+      <div className="admin-export" data-testid="admin-export-bar">
+        <span className="admin-export-label"><FileText size={14} /> Export CSV</span>
+        <label className="admin-export-date">From
+          <input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} data-testid="csv-date-from" />
+        </label>
+        <label className="admin-export-date">To
+          <input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} data-testid="csv-date-to" />
+        </label>
+        <button className="button button-small ghost" onClick={exportCsv} disabled={exporting} data-testid="csv-export-button">
+          <Download size={14} /> {exporting ? 'Preparing…' : 'Download'}
+        </button>
+      </div>
+
       <div className="admin-list">
         {loading && appointments.length === 0 ? (
           <div className="admin-empty">Loading appointments…</div>
@@ -164,29 +221,32 @@ function Dashboard({ onLogout }: { onLogout: () => void }) {
           <motion.article key={a.id} className="admin-card"
             initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
             data-testid={`admin-appointment-${a.id}`}>
-            <div className="admin-card-left">
-              <div className="admin-card-time">
-                <Clock3 size={14} /> {fmt(a.slot_start)}
+            <div className="admin-card-head">
+              <div className="admin-card-left">
+                <div className="admin-card-time">
+                  <Clock3 size={14} /> {fmt(a.slot_start)}
+                </div>
+                <h3><User size={15} strokeWidth={1.5} /> {a.name}</h3>
+                <a href={`mailto:${a.email}`} className="admin-email"><Mail size={13} /> {a.email}</a>
+                {a.message && <p className="admin-msg">"{a.message}"</p>}
               </div>
-              <h3><User size={15} strokeWidth={1.5} /> {a.name}</h3>
-              <a href={`mailto:${a.email}`} className="admin-email"><Mail size={13} /> {a.email}</a>
-              {a.message && <p className="admin-msg">"{a.message}"</p>}
-            </div>
-            <div className="admin-card-right">
-              <span className={statusMeta[a.status]?.className || 'pill'} data-testid={`status-badge-${a.id}`}>
-                {statusMeta[a.status]?.label || a.status}
-              </span>
-              <div className="admin-status-actions">
-                <button className="button button-small ghost" disabled={a.status === 'confirmed'}
-                  onClick={() => updateStatus(a.id, 'confirmed')} data-testid={`confirm-${a.id}`}>
-                  <CheckCircle2 size={14} /> Confirm
-                </button>
-                <button className="button button-small ghost danger" disabled={a.status === 'cancelled'}
-                  onClick={() => updateStatus(a.id, 'cancelled')} data-testid={`cancel-${a.id}`}>
-                  <XCircle size={14} /> Cancel
-                </button>
+              <div className="admin-card-right">
+                <span className={statusMeta[a.status]?.className || 'pill'} data-testid={`status-badge-${a.id}`}>
+                  {statusMeta[a.status]?.label || a.status}
+                </span>
+                <div className="admin-status-actions">
+                  <button className="button button-small ghost" disabled={a.status === 'confirmed'}
+                    onClick={() => updateStatus(a.id, 'confirmed')} data-testid={`confirm-${a.id}`}>
+                    <CheckCircle2 size={14} /> Confirm
+                  </button>
+                  <button className="button button-small ghost danger" disabled={a.status === 'cancelled'}
+                    onClick={() => updateStatus(a.id, 'cancelled')} data-testid={`cancel-${a.id}`}>
+                    <XCircle size={14} /> Cancel
+                  </button>
+                </div>
               </div>
             </div>
+            <NoteEditor appointmentId={a.id} initialNotes={a.notes || ''} onSave={saveNotes} />
           </motion.article>
         ))}
       </div>
@@ -208,6 +268,51 @@ function StatCard({ label, value, icon, tone }: { label: string; value: number; 
       <div>
         <span className="stat-num">{value}</span>
         <span className="stat-label">{label}</span>
+      </div>
+    </div>
+  )
+}
+
+function NoteEditor({ appointmentId, initialNotes, onSave }: { appointmentId: string; initialNotes: string; onSave: (id: string, notes: string) => Promise<void> }) {
+  const [value, setValue] = useState(initialNotes)
+  const [saving, setSaving] = useState(false)
+  const [status, setStatus] = useState<'idle' | 'saved' | 'error'>('idle')
+  useEffect(() => { setValue(initialNotes) }, [initialNotes])
+  const dirty = value !== initialNotes
+  const save = async () => {
+    if (!dirty || saving) return
+    setSaving(true); setStatus('idle')
+    try { await onSave(appointmentId, value); setStatus('saved'); setTimeout(() => setStatus('idle'), 1800) }
+    catch { setStatus('error') }
+    finally { setSaving(false) }
+  }
+  return (
+    <div className="admin-notes" data-testid={`notes-editor-${appointmentId}`}>
+      <label className="admin-notes-label">
+        <FileText size={13} /> Private notes
+      </label>
+      <textarea
+        className="admin-notes-input"
+        rows={2}
+        placeholder="Jot a private note — visible only in this dashboard."
+        value={value}
+        onChange={(e) => setValue(e.target.value)}
+        data-testid={`notes-input-${appointmentId}`}
+      />
+      <div className="admin-notes-footer">
+        <span className="admin-notes-status" data-testid={`notes-status-${appointmentId}`}>
+          {status === 'saved' && '✓ Saved'}
+          {status === 'error' && 'Save failed — try again'}
+          {status === 'idle' && dirty && 'Unsaved changes'}
+        </span>
+        <button
+          className="button button-small ghost"
+          onClick={save}
+          disabled={!dirty || saving}
+          data-testid={`notes-save-${appointmentId}`}
+        >
+          <Save size={13} /> {saving ? 'Saving…' : 'Save note'}
+        </button>
       </div>
     </div>
   )

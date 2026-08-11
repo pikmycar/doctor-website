@@ -2,50 +2,41 @@
 
 ## Original Problem Statement
 Build a premium doctor / clinic website (repo: https://github.com/pikmycar/doctor-website.git) with:
-- 3D hero section with interactive objects, smooth scroll animations, parallax, mouse-follow
-- 3D card transitions, micro-interactions, animated buttons
-- Premium gradients, lighting, glassmorphism
-- Responsive motion for mobile
-- Performance-conscious animations
+- 3D hero section, smooth scroll animations, parallax, mouse-follow, 3D card transitions
+- Premium gradients, glassmorphism, micro-interactions
+- Responsive, performance-conscious animations
 
 ## Architecture
-- **Frontend** (`/app/frontend`): Vite + React 19 + TypeScript, Framer Motion, React Three Fiber + Drei, Three.js, react-router-dom, Lucide icons. Runs on port 3000 (`yarn start`).
-- **Backend** (`/app/backend`): FastAPI on port 8001. Public: `/api/health`, `/api/availability`, `POST /api/appointments`. Auth: `/api/auth/login`, `/api/auth/logout`, `/api/auth/me`. Admin (JWT-protected): `/api/admin/appointments` (GET/PATCH), `/api/admin/stats`. MongoDB via `motor`.
-- **Ingress**: `/api/*` → backend:8001, everything else → frontend:3000.
+- **Frontend** (`/app/frontend`): Vite + React 19 + TS, Framer Motion, R3F + Drei, Three.js, react-router-dom.
+- **Backend** (`/app/backend`): FastAPI on 8001. Public: `/api/health`, `/api/availability`, `POST /api/appointments` (honeypot + rate limit). Auth: `/api/auth/login|logout|me`. Admin (JWT): `/api/admin/appointments` (GET/PATCH — status &/or notes), `/api/admin/appointments.csv`, `/api/admin/stats`.
+- Ingress: `/api/*` → 8001, everything else → 3000.
 
 ## User Personas
-- Prospective private-practice patients on desktop/mobile
+- Prospective private-practice patients (desktop/mobile)
 - Practice admin managing incoming appointment requests
 - Referring physicians assessing credibility
 
-## Core Requirements
-- Editorial, calm, "Meridian medical studio" brand voice
-- Accessible interactive 3D hero (reduced-motion fallback)
-- Real appointment request dialog with focus trap AND live slot booking
-- Private admin dashboard for the practice
-- Spam-resistant public form
-
 ## Implemented (dated)
-- **2026-08-11 (v1)**: 3D hero (React Three Fiber orb), animations, service cards, editorial about/approach/contact sections, appointment dialog with focus trap, responsive layout. Design guidelines generated.
-- **2026-08-11 (v2)**: Repo restructured into `/app/frontend/` + `/app/backend/`. Minimal FastAPI backend. deployment_agent PASS.
-- **2026-08-11 (v3)**: Appointment Storage (DB + admin retrieval), Doctor Profile section, Patient Stories testimonials, Live Availability slot picker with 5 business days × 30-min slots. testing_agent: 100% backend + 100% frontend.
-- **2026-08-11 (v4 — current)**: Admin experience + trust
-  - **Booking Alerts** — optional `ALERT_WEBHOOK_URL` env var; every new appointment fires a background POST + is logged into the `alerts` Mongo collection. Last alert status surfaced in the admin dashboard.
-  - **Admin Dashboard at `/admin`** — react-router-dom route with LoginPanel + Dashboard. bcrypt-hashed seed admin from `ADMIN_EMAIL`/`ADMIN_PASSWORD` env vars; JWT httpOnly cookie + Bearer fallback; brute-force lockout (5 fails → 15 min); stats cards; filter tabs (All / Requested / Confirmed / Cancelled); confirm/cancel buttons on each row.
-  - **Spam Shield** — hidden honeypot `website` field (position:absolute; left:-9999px; aria-hidden; tabIndex=-1) silently ignores bot submissions; IP-based rate limit at 5/hr on `POST /api/appointments` (429 with clean message); login endpoint also lockout-protected.
-  - Auth playbook consulted before implementation. Idempotent admin seed on startup. Credentials stored in `/app/memory/test_credentials.md`.
-  - testing_agent iteration 3: **100% backend (12/12)** + **100% frontend (17/17)**. Local pytest: **20/20** passing over HTTPS.
+- **2026-08-11 v1**: 3D hero + editorial layout + services + appointment dialog.
+- **2026-08-11 v2**: Repo restructure into `/app/frontend` + `/app/backend`. Minimal FastAPI backend.
+- **2026-08-11 v3**: Appointment storage, Doctor Profile, Patient Stories, Live Availability (5 days × 30-min slots). 100% tests.
+- **2026-08-11 v4**: Admin dashboard + Booking Alerts (webhook + DB log) + Spam Shield (honeypot + IP rate limit). 100% tests.
+- **2026-08-11 v5 (current)**: Admin polish
+  - **CSV Export** — `GET /api/admin/appointments.csv?date_from&date_to` streams CSV with headers `id,name,email,slot_start,slot_end,status,notes,message,created_at`; date pickers + Download button in the dashboard.
+  - **Appointment Notes** — new `notes` field on Appointment; `PATCH /api/admin/appointments/{id}` accepts optional `status`/`notes`; per-card private note editor with "Unsaved changes" → "✓ Saved" states.
+  - Fixed oldstyle numeral rendering (stat cards, day tabs, approach stats) with `font-variant-numeric: lining-nums tabular-nums`.
+  - testing_agent iteration 4: **31/31 pytest** + all frontend + regressions pass.
 
-## Prioritized Backlog
-- **P1** Real email alerts (Resend/SendGrid) — plug an API key and swap the webhook fire for an email send.
-- **P1** Google Calendar OAuth sync so booked slots reflect the doctor's live calendar.
-- **P2** Admin: search / date-range filter; CSV export.
-- **P2** Tighten CORS to explicit origin list once cross-origin deploy scenario appears.
-- **P2** Admin: bulk actions + notes per appointment.
-- **P3** SEO/OpenGraph, sitemap, analytics.
-- **P3** Auth: multi-admin + password reset flow.
+## Prioritized Backlog (deferred)
+- **P0** Real Emails via Resend/SendGrid (deferred — needs API key)
+- **P0** Google Calendar OAuth sync (deferred — needs Google Cloud OAuth credentials)
+- **P1** Admin: search / free-text filter, bulk actions
+- **P2** Tighten CORS to explicit origin list for future cross-origin deploys
+- **P2** Multi-admin + password reset flow
+- **P3** SEO/OpenGraph, sitemap, analytics
+- **P3** Public "download consent" watermark on CSV export
 
 ## Next Tasks
-1. Add real email delivery when the user provides a Resend/SendGrid key.
-2. Google Calendar OAuth integration.
-3. Admin: CSV export + date-range filter.
+1. Wire real email sending (Resend recommended) when user provides API key.
+2. Google Calendar OAuth to sync doctor's real schedule with the availability endpoint.
+3. Admin: search bar + bulk confirm/cancel.

@@ -1,0 +1,28 @@
+{
+  "summary": "Iteration 4 (CSV export + Appointment notes) fully verified. 31/31 pytest tests pass (11 new in test_meridian_csv_notes.py + full regression of test_meridian_api.py + test_meridian_admin.py). Frontend UI: admin login, CSV export bar with date pickers + Download (network 200 text/csv confirmed), per-card Private notes editor (Unsaved changes -> Save -> ✓ Saved toast -> disabled), notes persist across reload, confirm/cancel status buttons still work with the new PATCH schema, public booking end-to-end (POST returned 201, apt visible in admin with empty notes). Mobile 390x844 renders with no horizontal overflow (export bar and card head stack vertically). Verified stat digit spans use `font-variant-numeric: lining-nums tabular-nums` — screenshots show clean 1/0/12/13 etc. Grace Reyes demo appointment preserved with original status=requested and notes='Bring sleep-tracking data. Discuss Rx options.'; all TEST_ data + booking_attempts + login_attempts cleaned.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {"ui_bugs": [], "integration_issues": [], "design_issues": []},
+  "test_report_links": [
+    "/app/backend/tests/test_meridian_csv_notes.py",
+    "/app/backend/tests/test_meridian_admin.py",
+    "/app/backend/tests/test_meridian_api.py",
+    "/app/test_reports/pytest/csv_notes_results.xml",
+    "/app/test_reports/pytest/all_iter4_results.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "server.py: /api/admin/appointments.csv uses lexicographic upper bound `date_to + 'T99'` which works because 'T99' > any valid 'T23:59:59' ISO substring. Slightly hacky but correct for ISO strings; consider using date_to + 'T23:59:59.999999+99:99' or a real datetime comparator for readability. Not a bug.",
+    "server.py: PATCH admin_update_status returns Appointment(**result) after setdefault('notes',''). Good — handles legacy docs.",
+    "server.py: StatusIn.notes is bounded to max_length=4000 which is good. Consider also stripping/limiting name/message consistently.",
+    "Admin.tsx: exportCsv triggers real download; on error branch there's no user-facing toast — silently swallowed by the try/finally. Consider surfacing 'Export failed' via a small inline notice.",
+    "Admin.tsx: NoteEditor save() throws on failure, which becomes a rejected promise in saveNotes -> propagates to NoteEditor's own catch that sets status='error'. Chain works; small nit — the optimistic state in saveNotes is rolled back but the local NoteEditor `value` stays the newly-typed value. On reload the server value wins, so no persistent drift.",
+    "CORS still allow_origins=['*'] with allow_credentials=True — carried over from iteration 3, browsers ignore cookies with wildcard origin. Same-origin deployment works today; future cross-origin will need explicit origin list."
+  ],
+  "updated_files": ["/app/backend/tests/test_meridian_csv_notes.py (new)"],
+  "success_rate": {"backend": "100% (31/31 pytest)", "frontend": "100% (all iteration-4 UI checks + regression)"},
+  "test_credentials": "admin@meridianmedical.com / wwpY_RDaZSaGBMcJ (from /app/memory/test_credentials.md, verified)",
+  "seed_data_creation": "Ephemeral: inserted 3 date-range fake appointments + 1 legacy no-notes appointment via DB, and 1 public-flow booking via UI. All TEST_/csv_/notes_/hp_/rl_-prefixed data was deleted at end. booking_attempts and login_attempts collections reset. Grace Reyes demo restored to status=requested, notes='Bring sleep-tracking data. Discuss Rx options.'. Final appointments count = 1 (Grace only).",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Three backend test files now exist under /app/backend/tests/: test_meridian_api.py (public appointments/availability), test_meridian_admin.py (auth + admin + spam shield), test_meridian_csv_notes.py (CSV export + notes PATCH). Run all with: `set -a; source /app/frontend/.env; source /app/backend/.env; set +a; cd /app && python -m pytest backend/tests/ -v`. All files self-clean their TEST_-prefixed data. The CSV date filter uses a lexicographic upper bound `date_to + 'T99'` which is inclusive of the entire `date_to` day; be aware if querying with same from==to date."
+}

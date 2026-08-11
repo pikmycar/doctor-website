@@ -54,6 +54,7 @@ class Appointment(BaseModel):
     slot_end: str
     created_at: str
     status: str
+    notes: str = ""
 
 
 class Slot(BaseModel):
@@ -82,7 +83,8 @@ class AdminMe(BaseModel):
 
 
 class StatusIn(BaseModel):
-    status: str  # confirmed | cancelled | requested
+    status: Optional[str] = None  # confirmed | cancelled | requested
+    notes: Optional[str] = Field(default=None, max_length=4000)
 
 
 # ---------- Slot generation ----------
@@ -330,6 +332,7 @@ async def create_appointment(payload: AppointmentIn, request: Request, backgroun
         "slot_end": slot_end_lookup[payload.slot_start],
         "created_at": datetime.now(timezone.utc).isoformat(),
         "status": "requested",
+        "notes": "",
     }
     await db.appointments.insert_one(doc)
     background.add_task(dispatch_webhook_alert, doc)
@@ -400,22 +403,72 @@ admin_router = APIRouter(prefix="/api/admin", dependencies=[Depends(get_current_
 @admin_router.get("/appointments", response_model=List[Appointment])
 async def admin_list_appointments():
     docs = await db.appointments.find({}, {"_id": 0}).sort("created_at", -1).to_list(500)
+    for d in docs:
+        d.setdefault("notes", "")
     return [Appointment(**d) for d in docs]
 
 
 @admin_router.patch("/appointments/{appointment_id}", response_model=Appointment)
 async def admin_update_status(appointment_id: str, payload: StatusIn):
-    if payload.status not in VALID_STATUSES:
-        raise HTTPException(status_code=400, detail="Invalid status.")
+    updates: dict = {}
+    if payload.status is not None:
+        if payload.status not in VALID_STATUSES:
+            raise HTTPException(status_code=400, detail="Invalid status.")
+        updates["status"] = payload.status
+    if payload.notes is not None:
+        updates["notes"] = payload.notes.strip()
+    if not updates:
+        raise HTTPException(status_code=400, detail="Nothing to update.")
     result = await db.appointments.find_one_and_update(
         {"id": appointment_id},
-        {"$set": {"status": payload.status}},
+        {"$set": updates},
         return_document=True,
         projection={"_id": 0},
     )
     if not result:
         raise HTTPException(status_code=404, detail="Appointment not found.")
+    # Older docs may not have a notes field yet
+    result.setdefault("notes", "")
     return Appointment(**result)
+
+
+@admin_router.get("/appointments.csv")
+async def admin_export_csv(date_from: Optional[str] = None, date_to: Optional[str] = None):
+    """Export appointments as CSV, optionally filtered by slot_start date range (YYYY-MM-DD inclusive)."""
+    query: dict = {}
+    if date_from or date_to:
+        rng: dict = {}
+        if date_from:
+            rng["$gte"] = date_from
+        if date_to:
+            # slot_start is ISO like 2026-08-13T...; use a lexicographic upper bound
+            rng["$lt"] = date_to + "T99"
+        query["slot_start"] = rng
+
+    docs = await db.appointments.find(query, {"_id": 0}).sort("slot_start", 1).to_list(5000)
+    import io
+    import csv
+    buf = io.StringIO()
+    writer = csv.writer(buf)
+    writer.writerow(["id", "name", "email", "slot_start", "slot_end", "status", "notes", "message", "created_at"])
+    for d in docs:
+        writer.writerow([
+            d.get("id", ""),
+            d.get("name", ""),
+            d.get("email", ""),
+            d.get("slot_start", ""),
+            d.get("slot_end", ""),
+            d.get("status", ""),
+            d.get("notes", ""),
+            d.get("message", ""),
+            d.get("created_at", ""),
+        ])
+    filename = f"meridian-appointments-{datetime.now(timezone.utc).strftime('%Y%m%d')}.csv"
+    return Response(
+        content=buf.getvalue(),
+        media_type="text/csv",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
 
 
 @admin_router.get("/stats")
