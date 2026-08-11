@@ -87,6 +87,11 @@ class StatusIn(BaseModel):
     notes: Optional[str] = Field(default=None, max_length=4000)
 
 
+class BulkStatusIn(BaseModel):
+    ids: List[str] = Field(min_length=1, max_length=200)
+    status: str  # confirmed | cancelled | requested
+
+
 # ---------- Slot generation ----------
 
 BUSINESS_DAYS = 5
@@ -430,6 +435,17 @@ async def admin_update_status(appointment_id: str, payload: StatusIn):
     # Older docs may not have a notes field yet
     result.setdefault("notes", "")
     return Appointment(**result)
+
+
+@admin_router.post("/appointments/bulk")
+async def admin_bulk_update(payload: BulkStatusIn):
+    if payload.status not in VALID_STATUSES:
+        raise HTTPException(status_code=400, detail="Invalid status.")
+    result = await db.appointments.update_many(
+        {"id": {"$in": payload.ids}},
+        {"$set": {"status": payload.status}},
+    )
+    return {"matched": result.matched_count, "modified": result.modified_count, "status": payload.status}
 
 
 @admin_router.get("/appointments.csv")

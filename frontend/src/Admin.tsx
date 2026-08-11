@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { motion } from 'framer-motion'
-import { ArrowUpRight, CheckCircle2, Clock3, Download, FileText, LogOut, Mail, RotateCcw, Save, ShieldCheck, User, XCircle } from 'lucide-react'
+import { ArrowUpRight, CheckCircle2, CheckSquare, Clock3, Download, FileText, LogOut, Mail, RotateCcw, Save, Search, ShieldCheck, Square, User, XCircle } from 'lucide-react'
 
 type Appointment = {
   id: string
@@ -88,6 +88,9 @@ function Dashboard({ onLogout }: { onLogout: () => void }) {
   const [dateFrom, setDateFrom] = useState(today)
   const [dateTo, setDateTo] = useState(nextMonth)
   const [exporting, setExporting] = useState(false)
+  const [query, setQuery] = useState('')
+  const [selected, setSelected] = useState<Set<string>>(new Set())
+  const [bulkBusy, setBulkBusy] = useState(false)
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -161,7 +164,46 @@ function Dashboard({ onLogout }: { onLogout: () => void }) {
     onLogout()
   }
 
-  const filtered = filter === 'all' ? appointments : appointments.filter((a) => a.status === filter)
+  const filtered = useMemo(() => {
+    const base = filter === 'all' ? appointments : appointments.filter((a) => a.status === filter)
+    const q = query.trim().toLowerCase()
+    if (!q) return base
+    return base.filter((a) =>
+      a.name.toLowerCase().includes(q)
+      || a.email.toLowerCase().includes(q)
+      || (a.notes || '').toLowerCase().includes(q)
+      || (a.message || '').toLowerCase().includes(q)
+    )
+  }, [appointments, filter, query])
+
+  const toggleSelected = (id: string) => setSelected((cur) => {
+    const next = new Set(cur)
+    if (next.has(id)) next.delete(id); else next.add(id)
+    return next
+  })
+  const selectAllVisible = () => setSelected(new Set(filtered.map((a) => a.id)))
+  const clearSelection = () => setSelected(new Set())
+  const allVisibleSelected = filtered.length > 0 && filtered.every((a) => selected.has(a.id))
+
+  const bulkUpdate = async (status: Appointment['status']) => {
+    if (selected.size === 0 || bulkBusy) return
+    setBulkBusy(true)
+    const ids = Array.from(selected)
+    const prev = appointments
+    setAppointments((cur) => cur.map((x) => ids.includes(x.id) ? { ...x, status } : x))
+    try {
+      const res = await fetch('/api/admin/appointments/bulk', {
+        method: 'POST', credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ids, status }),
+      })
+      if (!res.ok) throw new Error('Bulk failed')
+      clearSelection()
+      load()
+    } catch {
+      setAppointments(prev)
+    } finally { setBulkBusy(false) }
+  }
 
   return (
     <div className="admin-shell" data-testid="admin-dashboard">
@@ -199,6 +241,42 @@ function Dashboard({ onLogout }: { onLogout: () => void }) {
         <button className="filter-tab refresh" onClick={load} data-testid="admin-refresh-button" aria-label="Refresh"><RotateCcw size={13} /></button>
       </div>
 
+      <div className="admin-search" data-testid="admin-search-bar">
+        <Search size={14} strokeWidth={1.6} />
+        <input
+          type="search"
+          placeholder="Search name, email, note or message…"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          data-testid="admin-search-input"
+          aria-label="Search appointments"
+        />
+        {query && (
+          <button type="button" className="admin-search-clear" onClick={() => setQuery('')} data-testid="admin-search-clear" aria-label="Clear search">
+            <XCircle size={14} />
+          </button>
+        )}
+        {(query || filter !== 'all') && (
+          <span className="admin-search-count" data-testid="admin-search-count">{filtered.length} of {appointments.length}</span>
+        )}
+      </div>
+
+      {selected.size > 0 && (
+        <motion.div className="bulk-bar" data-testid="admin-bulk-bar"
+          initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
+          <span className="bulk-count"><CheckSquare size={14} /> {selected.size} selected</span>
+          <button className="bulk-link" onClick={selectAllVisible} data-testid="bulk-select-all">Select all visible</button>
+          <button className="bulk-link" onClick={clearSelection} data-testid="bulk-clear">Clear</button>
+          <div className="bulk-spacer" />
+          <button className="button button-small ghost" onClick={() => bulkUpdate('confirmed')} disabled={bulkBusy} data-testid="bulk-confirm">
+            <CheckCircle2 size={14} /> Confirm all
+          </button>
+          <button className="button button-small ghost danger" onClick={() => bulkUpdate('cancelled')} disabled={bulkBusy} data-testid="bulk-cancel">
+            <XCircle size={14} /> Cancel all
+          </button>
+        </motion.div>
+      )}
+
       <div className="admin-export" data-testid="admin-export-bar">
         <span className="admin-export-label"><FileText size={14} /> Export CSV</span>
         <label className="admin-export-date">From
@@ -216,12 +294,22 @@ function Dashboard({ onLogout }: { onLogout: () => void }) {
         {loading && appointments.length === 0 ? (
           <div className="admin-empty">Loading appointments…</div>
         ) : filtered.length === 0 ? (
-          <div className="admin-empty" data-testid="admin-empty">No appointments in this view yet.</div>
+          <div className="admin-empty" data-testid="admin-empty">{query ? `No matches for "${query}".` : 'No appointments in this view yet.'}</div>
         ) : filtered.map((a) => (
-          <motion.article key={a.id} className="admin-card"
+          <motion.article key={a.id} className={`admin-card ${selected.has(a.id) ? 'is-selected' : ''}`}
             initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
             data-testid={`admin-appointment-${a.id}`}>
             <div className="admin-card-head">
+              <button
+                type="button"
+                className="admin-checkbox"
+                onClick={() => toggleSelected(a.id)}
+                aria-pressed={selected.has(a.id)}
+                aria-label={selected.has(a.id) ? 'Deselect appointment' : 'Select appointment'}
+                data-testid={`select-${a.id}`}
+              >
+                {selected.has(a.id) ? <CheckSquare size={18} strokeWidth={1.7} /> : <Square size={18} strokeWidth={1.5} />}
+              </button>
               <div className="admin-card-left">
                 <div className="admin-card-time">
                   <Clock3 size={14} /> {fmt(a.slot_start)}
