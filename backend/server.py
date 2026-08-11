@@ -261,7 +261,7 @@ async def get_availability():
     booked_cursor = db.appointments.find(
         {"status": {"$ne": "cancelled"}},
         {"slot_start": 1, "_id": 0},
-    )
+    ).limit(1000)
     booked = {doc["slot_start"] async for doc in booked_cursor}
 
     payload: List[DaySlots] = []

@@ -1,0 +1,31 @@
+{
+  "summary": "Regression smoke after deployment fix (.gitignore + VITE_BACKEND_URL + .limit(1000) on booked_cursor). Ran full pytest suite (41/41 PASS) and did UI smoke on admin dashboard. Public /api/health=200, /api/availability returns exactly 5 business days x 16 slots. Admin login works, dashboard loads Grace Reyes demo appointment with notes intact. All /api/* calls returned 200 (except expected pre-login 401 on /api/auth/me). No failed requests, no CORS errors. Nothing regressed.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "Admin dashboard CSV export", "issues": ["Uses native browser date picker (input type=date) instead of a shadcn Calendar component - minor design inconsistency, non-blocking"]}
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_meridian_api.py",
+    "/app/backend/tests/test_meridian_admin.py",
+    "/app/backend/tests/test_meridian_csv_notes.py",
+    "/app/backend/tests/test_meridian_bulk.py",
+    "/app/test_reports/pytest/pytest_results.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "Deployment fix looks clean: .env files now included in build context, VITE_BACKEND_URL matches REACT_APP_BACKEND_URL, memory/test_credentials.md correctly gitignored.",
+    ".limit(1000) on booked_cursor is a safe defensive cap - existing pytest availability_structure test still passes.",
+    "Pytest warning: class-scoped fixture defined as instance method (test_meridian_csv_notes.py) - deprecated in pytest 10. Non-blocking but worth cleaning up."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "100% (41/41)", "frontend": "100%"},
+  "test_credentials": "admin@meridianmedical.com / wwpY_RDaZSaGBMcJ - verified working",
+  "seed_data_creation": "None. Grace Reyes demo appointment preserved (status=requested, notes='Bring sleep-tracking data. Discuss Rx options.').",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Regression complete after deployment build fix. Full 41-test suite passes in ~8s. Preview URL admin dashboard verified via UI smoke. No behavioral changes from the fix."
+}
