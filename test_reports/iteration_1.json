@@ -1,0 +1,21 @@
+{
+  "summary": "Completed focused desktop and mobile smoke testing for the doctor marketing site. Hero, branding, 3D object marker, appointment submission, navigation anchors, mobile menu, overflow behavior, and reduced-motion usability passed.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "Application bundle", "issues": ["Production build emits a 1.28 MB minified JS chunk (363 KB gzip), indicating the 3D stack is not code-split/lazy-loaded despite Suspense; review performance on slower mobile devices."]}
+    ]
+  },
+  "test_report_links": ["/app/test_reports/iteration_1.json"],
+  "action_items": ["Consider dynamic-importing the 3D hero to reduce initial JavaScript payload.", "Add a graceful non-WebGL fallback for browsers/devices where Canvas cannot render.", "Consider implementing appointment dialog focus trapping and restoring focus to the triggering CTA for keyboard accessibility."],
+  "critical_code_review_comments": ["AppointmentDialog uses a semantic dialog but does not trap keyboard focus or restore focus after closing.", "The CSS reduced-motion rule shortens CSS transitions, but Framer Motion and React Three Fiber pointer/float behavior are not explicitly disabled in JavaScript under prefers-reduced-motion."],
+  "updated_files": ["/app/test_reports/iteration_1.json"],
+  "success_rate": {"backend": "N/A", "frontend": "100%"},
+  "seed_data_creation": "",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Tested at the active Vite dev URL http://localhost:5173 because no frontend/.env or public backend URL was present and port 3000 was not listening. First visibility wait was flaky, but DOM-presence based rerun passed all requested flows.",
+  "rca of the issue": "No functional issue reproduced. The oversized initial bundle is caused by the statically imported React Three Fiber/Drei/Three dependencies; Suspense alone does not split the bundle."
+}

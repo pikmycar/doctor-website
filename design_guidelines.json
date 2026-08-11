@@ -1,0 +1,93 @@
+{
+  "project": "PikMyCar Doctor Website Motion Redesign",
+  "context": "marketing_site",
+  "theme": "light clinical editorial with midnight depth accents",
+  "discovery": {
+    "audience": "Patients and caregivers seeking a trustworthy, modern doctor or specialist",
+    "primary_tasks": ["Understand the doctor's expertise", "Explore services", "Book an appointment", "Send a contact request"],
+    "success_actions": ["Book appointment CTA click", "Appointment form submission", "Phone or email contact click"],
+    "emotional_tone": "reassuring, human, precise, quietly premium",
+    "design_fusion": ["clinical anatomy diagrams", "editorial magazine typography", "museum-like object lighting", "tactile glass interface surfaces"]
+  },
+  "research_references": [
+    {"source": "https://toimi.pro/blog/best-healthcare-website-designs/", "descriptor": "Hims & Hers is cited for a coherent motion system that makes the brand feel alive without losing clarity."},
+    {"source": "https://www.magier.com/blog/best-medical-website-designs", "descriptor": "CMR Surgical uses motion to explain advanced medical technology where static imagery would be insufficient."},
+    {"source": "https://thedigitalelevator.com/blog/best-biotech-websites/", "descriptor": "Novita pairs 3D molecular animation with scroll-linked movement for scientific storytelling."},
+    {"source": "https://dribbble.com/search/healthcare-3d", "descriptor": "Healthcare 3D references commonly use a single recognizable object, restrained lighting, and a clear CTA rather than a noisy scene."}
+  ],
+  "design_directions_with_probabilities": [
+    {"name": "Anatomy Atlas", "probability": 0.35, "description": "Editorial clinic homepage with a floating translucent anatomical orb and precise annotation lines."},
+    {"name": "Quiet Instrument", "probability": 0.25, "description": "Museum display language: one softly lit medical instrument, generous negative space, tactile appointment panel."},
+    {"name": "Care in Orbit", "probability": 0.2, "description": "Patient-centered orbital 3D objects that respond gently to pointer movement and scroll depth."},
+    {"name": "Swiss Clinic Journal", "probability": 0.12, "description": "High-contrast grid, red functional accent, mono metadata, editorial case-study sections."},
+    {"name": "Warm Clinical Studio", "probability": 0.08, "description": "Bone white, clay and forest palette with paper grain and subtle 3D service tiles."}
+  ],
+  "typography": {
+    "heading_font": "Cormorant Garamond",
+    "body_font": "IBM Plex Sans",
+    "mono_font": "IBM Plex Mono",
+    "rules": ["Use Cormorant Garamond for H1-H3 with tracking-tight and font-light or font-semibold contrast.", "Use IBM Plex Sans for readable body copy and controls.", "Use IBM Plex Mono for eyebrow labels, appointment metadata, and small technical annotations.", "H1 max text-6xl; H2 max text-4xl; body text-base with leading-relaxed.", "Overlines are uppercase, text-xs, tracking-[0.2em]."]
+  },
+  "colors": {
+    "archetype": "organic_earthy with Swiss functional contrast",
+    "background": "#F4F1EA",
+    "surface": "#FFFDF8",
+    "ink": "#17212B",
+    "muted_ink": "#53616A",
+    "forest": "#173F3B",
+    "accent_clay": "#C45C45",
+    "accent_sky": "#8FB9C5",
+    "line": "#D4D1C8",
+    "focus": "#B84B35",
+    "rules": ["Never use pure black, pure gray, teal #1B93A4, or forbidden purple #7351B7.", "Use clay only for primary CTAs and functional highlights.", "Keep gradients below 20%; prefer solid layered surfaces, grain, and lighting.", "Ensure normal text reaches 4.5:1 contrast and large text 3:1."]
+  },
+  "visual_enhancers": ["CSS grain overlay using a tiny inline SVG noise data URI with aria-hidden=true", "soft radial lighting behind the 3D object, not a full-page gradient", "thin anatomical annotation rules", "layered ambient and direct shadows", "custom scrollbar using tinted neutral colors", "glass appointment panel with bg-white/75 backdrop-blur-xl backdrop-saturate-150 and border-white/60; never fully transparent"],
+  "component_name": "DoctorWebsiteMotion",
+  "component_path": "/app/src/App.js",
+  "js_implementation": {
+    "framework": "React JavaScript with Vite; write .js files, not .tsx",
+    "recommended_dependencies": ["framer-motion", "lenis", "three", "@react-three/fiber", "@react-three/drei", "sonner", "lucide-react"],
+    "structure": ["App.js", "components/Navigation.js", "components/MedicalOrb.js", "components/ServiceCard.js", "components/AppointmentDialog.js", "index.css"],
+    "shadcn_rule": "Use raw HTML and Tailwind for marketing layout; use customized shadcn primitives for dialog, form, input and toast interactions. Never use native select for advanced interaction."
+  },
+  "grids": {
+    "hero": "grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12; copy spans 5 columns, 3D scene spans 7 columns",
+    "services": "grid-cols-1 md:grid-cols-8 lg:grid-cols-12 gap-8; mix spans 5, 4, and 3; leave one open cell on desktop",
+    "proof": "grid-cols-1 md:grid-cols-3 gap-6 with direct grid children",
+    "rule": "Mobile-first; use generous p-8 to p-16; bordered containers always have internal padding."
+  },
+  "layouts": {
+    "header": "Sticky z-50 solid or glass surface with logo, 4 visible desktop links (About, Expertise, Approach, Contact), and primary Book appointment CTA; mobile menu only below md.",
+    "hero": "Asymmetric left-aligned copy with eyebrow, H1, supporting copy, two CTAs, and a right-side 3D anatomical orb. Add a small floating credential label for depth.",
+    "services": "Editorial section intro on the left; offset 3D-tilting service cards on the right. Each card has icon, title, concise description, and arrow affordance.",
+    "conversion": "Dark forest appointment band with a high-contrast form trigger and phone contact; footer shifts to forest for a strong contrast change.",
+    "unconventional_decisions": ["Breaks centered hero convention to mirror a doctor's consultation: patient reads from the left while the object establishes presence on the right.", "Use anatomy-inspired annotation lines as navigation landmarks, making science feel personal rather than decorative."]
+  },
+  "motion": {
+    "smooth_scroll": "Initialize Lenis on mount and destroy on unmount; disable or reduce under prefers-reduced-motion.",
+    "hero_3d": "Use React Three Fiber Canvas lazily inside Suspense. Float a low-poly translucent medical orb with AmbientLight, DirectionalLight, and Environment. Pointer movement rotates the group by a clamped amount; never block CTA hit targets.",
+    "scroll_reveal": "Framer Motion whileInView opacity and y only, stagger 0.08s; viewport once true.",
+    "parallax": "Use useScroll/useTransform for slow decorative annotation movement and a restrained hero object depth shift.",
+    "cards": "On hover, rotateX/rotateY within 5 degrees, translateY -4px, and raise shadow; reset smoothly. On tap scale 0.98.",
+    "buttons": "Specific transitions for transform, background-color, color, and box-shadow; include arrow nudge on hover.",
+    "reduced_motion": "CSS @media (prefers-reduced-motion: reduce) sets animation-duration: 0.01ms, scroll-behavior:auto; JavaScript skips Lenis and pointer/parallax motion."
+  },
+  "accessibility": {
+    "requirements": ["Every button, link, input, menu trigger, appointment confirmation, and key informational element must include a stable kebab-case data-testid.", "Use semantic header, nav, main, section, footer, headings in order, and labelled form fields.", "Provide visible focus-visible rings with high contrast.", "Decorative canvas, grain, and annotation lines use aria-hidden=true; provide a text alternative describing the doctor's expertise beside the canvas.", "Do not rely on motion or color alone for meaning.", "Respect keyboard navigation and trap focus in appointment dialog.", "Do not place text over busy imagery without a scrim."]
+  },
+  "media": {
+    "strategy": "3D object is the hero media; use one doctor portrait only in an About or trust section. All images must be lazy-loaded and have meaningful alt text.",
+    "mobile": "Canvas max-height: 52vh on mobile and never exceed 80vh; simplify to a static orb or low DPR on small screens.",
+    "image_urls": [
+      {"category": "doctor_portrait", "url": "https://images.unsplash.com/photo-1612276529624-33e7430ebce8?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA3MDB8MHwxfHNlYXJjaHwzfHxkb2N0b3IlMjBwb3J0cmFpdHxlbnwwfHx8Ymx1ZXwxNzg2NDE1MTI1fDA&ixlib=rb-4.1.0&q=85", "description": "Doctor portrait in blue shirt for trust/about section; crop tightly and keep background light."},
+      {"category": "doctor_portrait_alt", "url": "https://images.unsplash.com/photo-1612636321938-2a60d4febfae?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA3MDB8MHwxfHNlYXJjaHwxfHxkb2N0b3IlMjBwb3J0cmFpdHxlbnwwfHx8Ymx1ZXwxNzg2NDE1MTI1fDA&ixlib=rb-4.1.0&q=85", "description": "Doctor in white coat for supporting credibility section; do not use as hero background."}
+    ]
+  },
+  "3d_libraries": {
+    "primary": "@react-three/fiber + three + @react-three/drei",
+    "steps": ["Lazy load the canvas component", "Use low-poly geometry and devicePixelRatio capped at 1.5", "Set transparent canvas background only when it is a decorative canvas layered over an opaque section", "Add ambient and directional lighting so the object remains legible", "Pause or simplify render on hidden tab and mobile if performance drops"],
+    "fallback": "If WebGL is unavailable, render a static CSS orb with accessible explanatory copy. This is a graceful fallback, not a mocked flow."
+  },
+  "general_ui_ux_design_guidelines": ["Do not use generic centered layouts, default Vercel styling, or full-screen gradients.", "Use 2-3x more spacing than typical designs and preserve negative space.", "No universal transition: all transitions must name specific properties.", "Interactive states need hover, active, focus, loading, and disabled treatments with explicit text colors.", "Use pill-shaped or crisp-edged buttons with micro-animation.", "Never use emoji as icons; use lucide-react.", "Customize scrollbar and selection color with the palette.", "Use Sonner for appointment/contact feedback.", "Test mobile at 375px and desktop at 1440px; verify keyboard flow, reduced motion, and WebGL fallback.", "Keep primary color limited to CTAs, active indicators, and meaningful status signals."] ,
+  "instructions_to_main_agent": "Build the doctor website as a polished marketing experience in /app/src using JavaScript files. Preserve the requested doctor purpose, establish believable content, and prioritize appointment conversion. Do not invent placeholder image URLs; use only the provided image URLs or the procedural 3D object. Add data-testid to all interactive and key informational elements."
+}
