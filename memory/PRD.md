@@ -1,23 +1,45 @@
-# Meridian Medical Studio — Product Notes
+# Meridian Medical Studio — Product Requirements
 
-## Original problem statement
-Build the referenced doctor website with a 3D hero, smooth scroll animation, parallax/depth, mouse-follow interactions, 3D card transitions, animated buttons, premium lighting/gradients/shadows/glassmorphism, responsive motion, and performance-conscious behavior.
+## Original Problem Statement
+Build a premium doctor / clinic website (repo: https://github.com/pikmycar/doctor-website.git) with:
+- 3D hero section with interactive objects
+- Smooth scroll-based animations, parallax and depth
+- Mouse-follow / hover interactions
+- 3D card transitions
+- Micro-interactions & animated buttons
+- Premium gradients, lighting, shadows, glassmorphism
+- Responsive motion for mobile
+- Performance-conscious animations
 
-## Architecture decisions
-- React + TypeScript + Vite single-page marketing site.
-- Framer Motion handles reveals, card motion, and dialog transitions.
-- React Three Fiber/Drei/Three power the interactive medical orb in a lazy-loaded HeroScene chunk.
-- CSS supplies the responsive editorial system, grain, fallback orb, reduced-motion behavior, and dialog surfaces.
+## Architecture
+- **Frontend** (`/app/frontend`): Vite + React 19 + TypeScript, Framer Motion, React Three Fiber + Drei, Three.js, Lucide icons. Runs on port 3000 (`yarn start` → `vite`).
+- **Backend** (`/app/backend`): FastAPI on port 8001, exposes `/api/` and `/api/health`. MongoDB via `motor` (env vars `MONGO_URL`, `DB_NAME`). Placeholder — no business endpoints yet.
+- **Ingress**: `/api/*` → backend:8001, everything else → frontend:3000.
 
-## Implemented
-- Meridian medical studio brand experience with hero, navigation, about, expertise cards, approach band, contact strip, and footer.
-- Appointment dialog with required fields, confirmation state, Escape handling, focus trap, focus restoration, and stable test IDs.
-- Responsive mobile menu, anchor navigation, pointer-follow depth, 3D orb fallback, and reduced-motion CSS support.
+## User Personas
+- Prospective private-practice patients browsing on desktop/mobile
+- Existing patients booking or exploring the practice's approach
+- Referring physicians assessing credibility
 
-## Prioritized backlog
-- P0: None.
-- P1: Connect appointment request to a real scheduling/email service.
-- P2: Add a dedicated doctor profile and patient stories section.
+## Core Requirements (Static)
+- Editorial, calm, "Meridian medical studio" brand voice
+- Accessible interactive 3D hero (with reduced-motion fallback)
+- Appointment request dialog with focus trap
+- Responsive across breakpoints
+- No visual regressions from earlier iteration
 
-## Next tasks
-- Add scheduling availability and confirmation emails when an integration is selected.
+## Implemented (dated)
+- **2026-08-11**: Frontend restructured into `/app/frontend/`; minimal FastAPI backend scaffolded at `/app/backend/` with `/api/health`; env files added; Vite server bound to 0.0.0.0:3000 with `allowedHosts: true`; supervisor services green; deployment_agent PASS.
+- **2026-08-11** (prior session): 3D hero (React Three Fiber orb), scroll animations, service cards, appointment dialog with focus trap, responsive layout, design guidelines, testing_agent iteration 1 passed.
+
+## Prioritized Backlog
+- **P1** Wire appointment dialog `POST /api/appointments` to store requests in Mongo and (optionally) email routing.
+- **P1** Live availability / calendar embed for booking.
+- **P2** Doctor bio + patient stories section.
+- **P2** SEO / OpenGraph tags and sitemap.
+- **P3** Analytics + form spam protection.
+
+## Next Tasks
+1. Add appointment persistence endpoint + hook up the dialog form.
+2. Add a doctor profile section with photo, credentials, and philosophy.
+3. Consider Stripe/booking integration if user wants paid consults.
