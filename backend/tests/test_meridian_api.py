@@ -85,8 +85,13 @@ def test_create_appointment_success_and_persistence(api):
                 assert s["available"] is False
     assert found, "Slot not found in fresh availability"
 
-    # Verify listing (reverse chronological)
-    r3 = api.get(f"{BASE_URL}/api/appointments", timeout=15)
+    # Verify listing (reverse chronological) via admin endpoint
+    login = api.post(f"{BASE_URL}/api/auth/login",
+                     json={"email": "admin@meridianmedical.com", "password": "wwpY_RDaZSaGBMcJ"}, timeout=15)
+    assert login.status_code == 200
+    token = login.json()["access_token"]
+    r3 = api.get(f"{BASE_URL}/api/admin/appointments",
+                 headers={"Authorization": f"Bearer {token}"}, timeout=15)
     assert r3.status_code == 200
     listing = r3.json()
     assert any(a["id"] == data["id"] for a in listing)

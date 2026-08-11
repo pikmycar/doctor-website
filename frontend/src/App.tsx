@@ -35,6 +35,7 @@ function AppointmentDialog({ open, onClose }: { open: boolean; onClose: () => vo
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [message, setMessage] = useState('')
+  const [website, setWebsite] = useState('') // honeypot
   const [submitting, setSubmitting] = useState(false)
   const [errorMsg, setErrorMsg] = useState('')
   const [submitted, setSubmitted] = useState(false)
@@ -63,7 +64,7 @@ function AppointmentDialog({ open, onClose }: { open: boolean; onClose: () => vo
     setSubmitted(false)
     setSelectedSlot(null)
     setErrorMsg('')
-    setName(''); setEmail(''); setMessage('')
+    setName(''); setEmail(''); setMessage(''); setWebsite('')
     loadAvailability()
     setTimeout(() => firstInput.current?.focus(), 40)
     const closeOnEscape = (event: KeyboardEvent) => {
@@ -90,7 +91,7 @@ function AppointmentDialog({ open, onClose }: { open: boolean; onClose: () => vo
       const res = await fetch(`${API_BASE}/api/appointments`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, email, message, slot_start: selectedSlot.start }),
+        body: JSON.stringify({ name, email, message, slot_start: selectedSlot.start, website }),
       })
       if (!res.ok) {
         const detail = await res.json().catch(() => ({ detail: 'Something went wrong.' }))
@@ -158,6 +159,10 @@ function AppointmentDialog({ open, onClose }: { open: boolean; onClose: () => vo
           <label>Name<input ref={firstInput} required value={name} onChange={(e) => setName(e.target.value)} placeholder="Your name" data-testid="appointment-name-input" /></label>
           <label>Email<input required type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@example.com" data-testid="appointment-email-input" /></label>
           <label>What brings you in?<textarea rows={3} value={message} onChange={(e) => setMessage(e.target.value)} placeholder="A little context helps us prepare" data-testid="appointment-message-input" /></label>
+          {/* Honeypot: real users leave this blank; bots fill it. Hidden from screen readers + tab order. */}
+          <div className="hp-field" aria-hidden="true">
+            <label>Your website<input type="text" tabIndex={-1} autoComplete="off" value={website} onChange={(e) => setWebsite(e.target.value)} data-testid="appointment-hp-input" /></label>
+          </div>
           {errorMsg && <p className="dialog-error" role="alert" data-testid="appointment-error">{errorMsg}</p>}
           <button className="button button-dark full" type="submit" disabled={submitting || !selectedSlot} data-testid="appointment-submit-button">
             {submitting ? 'Sending…' : selectedSlot ? `Request · ${activeDay?.day_label} ${selectedSlot.label}` : 'Pick a time to continue'}
